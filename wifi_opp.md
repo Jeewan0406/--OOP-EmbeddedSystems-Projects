@@ -83,6 +83,34 @@ void loop()
 ```
 ![image](https://github.com/user-attachments/assets/f4533912-fd93-4896-a64b-ba45a4343476)
 
+# Header file
+```c
+const char* ssid, const char* pass
+```
+This variable will not hold a direct value, but rather an address to a value of a specific type. 
+**ssid**/**pass** is pointer to const char data type. 
+
+![image](https://github.com/user-attachments/assets/0ceab312-0438-473c-9365-156273d66b45)
+![image](https://github.com/user-attachments/assets/8648314c-a44d-4cdf-843c-00f3c817ebdc)
+
+Following are the list of contenst decleared/defined in header file:
+1.  Include guards (#ifndef / #define or #pragma once)
+
+2.  Core Wi‑Fi header (<WiFi.h> or <ESP8266WiFi.h>)
+
+3. Protocol headers (WiFiClient.h, WiFiServer.h, WiFiUdp.h)
+
+4. Mode-specific headers (WiFiSTA.h, WiFiAP.h, WiFiScan.h, etc.)
+
+5. Definition of WiFiClass and external WiFi object, decleare class name with methods/functions inside the class
+
+6. Declared coonstructore insdie the class.
+
+```c
+wificlass(const char* ssid, const char* pass);
+```
+Declaration of constructor––it tells the compiler “this constructor exists,” but doesn’t give its code (body).
+
 # wifi_header
 ```C
 // Prevents the header file from being included multiple times
@@ -118,6 +146,84 @@ class wificlass
 };
 
 #endif // WIFIHEADER_H  // End of include guard
+```
+# Implementation file
+# wificpp.cpp
+The compiler needs to know that the definition in the .cpp matches exactly what you declared in the header.
+
+Repeating (const char* ssid, const char* pass) ensures the types, order, and const-correctness match (important even if const can sometimes be optional) 
+
+**ssid & pass** are passed temporarily during object creation. The actual ssid and pass characters are stored permanently in Flash Memory as string literals (sequence of characters enclosed in double quotes (" "), representing a fixed value directly in your source code.) 
+The ssid and pass parameters within the constructor (wificlass::wificlass(const char* ssid, const char* pass)) are indeed temporary pointer variables. These temporary pointer variables hold the memory addresses of the string literals in Flash. These temporary pointer variables exist only on the stack (in SRAM) for the brief duration that the constructor function is executing. As soon as the constructor finishes executing, these temporary ssid and pass parameter variables are popped off the stack and their memory in SRAM is reclaimed. Their values (the addresses they held) are effectively "erased" or become meaningless because the memory space is now free for other uses.
+
+when constructor special function is running it will automatically create memory/stack frame (dedicated block of memory for that specific function call)  is allocated in SRAM using the pointer variable. When the constructor is called, a stack frame is allocated in SRAM. Within this stack frame, memory is reserved for the constructor's local variables, including its parameters (ssid and pass). These parameters are indeed pointer variables.The parameters (ssid and pass) hold the values (memory addresses of the string literals in Flash) temporarily while the constructor is active. These values are then copied into the object's permanent member variables (_ssid and _pass).This is the essence of stack memory management. Once the constructor's execution completes, its stack frame is "popped," and the memory it occupied (including the temporary ssid and pass parameter variables) is immediately made available for other functions to use. The data itself might still be there briefly, but the memory is no longer considered in use by your program and can be overwritten.
+
+The call stack efficiently manages memory for local variables and function calls by automatically creating temporary storage when a function starts and clearing it away when the function finishes. This push-and-pop system quickly reuses memory, ensuring your program runs smoothly without needing complex manual memory cleanup for every small task.
+```c
+#include "wifiheader.h" // Include the custom header file for wificlass declarations.
+                        // This makes the wificlass definition (its structure and
+                        // function prototypes) available to this source file.
+
+#include <WiFi.h>       // Include the standard Arduino WiFi library.
+                        // This provides access to functions like WiFi.begin(),
+                        // WiFi.status(), WL_CONNECTED, WiFi.localIP(), etc.,
+                        // which are necessary for WiFi operations on ESP32.
+
+// Constructor definition for the wificlass.
+// This special member function is automatically called when a wificlass object is created.
+// Its purpose is to initialize the object's state (its member variables).
+//
+// Parameters:
+//   ssid: A pointer to a constant character array (C-style string) representing the WiFi SSID.
+//         The 'const' keyword ensures that the string pointed to cannot be modified through this pointer.
+//   pass: A pointer to a constant character array (C-style string) representing the WiFi password.
+//         The 'const' keyword ensures that the string pointed to cannot be modified through this pointer.
+wificlass::wificlass(const char* ssid, const char* pass)
+{
+  // Initialize the private member variable '_ssid' with the value of the 'ssid' parameter.
+  // 'this->' explicitly refers to the member variable of the current object.
+  // In this case, 'ssid' (parameter) contains a memory address (e.g., 0x1000 in Flash).
+  // '_ssid' (member variable) will now store that same memory address, effectively pointing
+  // to the same SSID string literal in Flash memory.
+  this->_ssid = ssid; // Analogy: self._ssid = ssid in Python (assigns the value)
+
+  // Initialize the private member variable '_pass' with the value of the 'pass' parameter.
+  // Similar to _ssid, '_pass' will store the memory address of the password string literal in Flash.
+  this->_pass = pass;
+}
+
+// Definition of the 'wifi_connect' member function of the wificlass.
+// This function handles the process of connecting the ESP32 to the WiFi network.
+void wificlass::wifi_connect()
+{
+  // Initiate the WiFi connection using the stored SSID and password.
+  // WiFi.begin() is a non-blocking function; it starts the connection attempt
+  // but doesn't wait for it to complete.
+  WiFi.begin(this->_ssid, this->_pass); // Use 'this->' to access the object's private members.
+
+  // Enter a loop to continuously check the WiFi connection status.
+  // The loop continues as long as the WiFi status is NOT 'WL_CONNECTED'.
+  // WL_CONNECTED is an enumeration constant indicating a successful connection.
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    // Pause program execution for 1000 milliseconds (1 second).
+    // This delay is important to prevent the loop from running too fast,
+    // consuming excessive CPU cycles, and to allow the WiFi module time to connect.
+    delay(1000);
+
+    // Print a message to the Serial Monitor indicating that the connection is in progress.
+    Serial.println("Connecting to WiFi...");
+  }
+
+  // Once the loop is exited, it means WiFi.status() IS WL_CONNECTED.
+  // Print a success message to the Serial Monitor.
+  Serial.println("Connected to WiFi!");
+
+  // Print the local IP address assigned to the ESP32 by the router.
+  // This is useful for accessing the ESP32 over the network.
+  Serial.println(WiFi.localIP());
+}
+
 ```
 
 
